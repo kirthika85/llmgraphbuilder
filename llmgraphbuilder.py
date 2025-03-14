@@ -1,11 +1,10 @@
 import os
 from neo4j import GraphDatabase
-from pyvis.network import Network
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
-# Fetch credentials from Streamlit secrets
+# Fetch credentials from environment variables
 URI = os.getenv("NEO4J_URI")  # Example: "neo4j+s://your-instance.databases.neo4j.io"
 AUTH = (os.getenv("NEO4J_USERNAME"), os.getenv("NEO4J_PASSWORD"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -119,18 +118,4 @@ cypher_query_text = convert_to_cypher(question)
 print("Generated Cypher Query:", cypher_query_text)
 
 # Extract actual Cypher queries from the response
-cypher_queries = [line.strip() for line in cypher_query_text.splitlines() if line.strip().startswith(("CREATE", "MATCH"))]
-print("Extracted Cypher Queries:", cypher_queries)
-
-# Create nodes and relationships dynamically using extracted queries
-create_graph_data(cypher_queries)
-
-# Fetch graph data dynamically for visualization or debugging purposes
-nodes, edges = fetch_graph_data()
-
-print("\nGraph Data:")
-print(f"Nodes: {nodes}")
-print(f"Edges: {edges}")
-
-# Close Neo4j driver when done
-driver.close()
+cypher_queries = [line.strip() for line in cypher
