@@ -2,7 +2,7 @@ import streamlit as st
 from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
-from langchain_openai import OpenAI  # Updated import for OpenAI integration
+from langchain_openai import OpenAI
 from langchain.chains import LLMChain, PromptTemplate
 
 # Fetch credentials from Streamlit secrets
