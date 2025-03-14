@@ -71,4 +71,5 @@ llm = ChatOpenAI(model="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
 # Define a prompt template for querying the database
 template = PromptTemplate(
     input_variables=["query"],
-    template="Convert the following text into Cypher queries
+    template="Convert the following text into Cypher queries to create nodes and relationships: {query}"
+)
