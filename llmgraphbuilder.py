@@ -85,7 +85,6 @@ def fetch_graph_data():
         st.error(f"Error fetching graph data: {e}")
         return [], []
 
-
 # Function to visualize graph using PyVis
 def visualize_graph(nodes, edges):
     st.write("Visualizing graph...")
