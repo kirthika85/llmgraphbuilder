@@ -125,12 +125,19 @@ if st.button("Submit"):
         response = llm([HumanMessage(content=prompt)])
         
         # Access the response content directly (the generated Cypher query)
-        cypher_query = response.content
+        cypher_query_text = response.content
         
-        st.write(f"Generated Cypher Query: {cypher_query}")
+        # Extract actual Cypher queries from the response
+        cypher_queries = []
+        for line in cypher_query_text.splitlines():
+            if line.strip().startswith("CREATE") or line.strip().startswith("MATCH"):
+                cypher_queries.append(line.strip())
+        
+        st.write(f"Extracted Cypher Queries: {cypher_queries}")
         
         # Create nodes and relationships in Neo4j database
-        create_graph_data(cypher_query)
+        for query in cypher_queries:
+            create_graph_data(query)
         
         # Fetch graph data dynamically for visualization
         nodes, edges = fetch_graph_data()
