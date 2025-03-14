@@ -2,7 +2,7 @@ import streamlit as st
 from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
-from langchain.llms import OpenAI
+from langchain_openai import OpenAI  # Updated import for OpenAI integration
 from langchain.chains import LLMChain, PromptTemplate
 
 # Fetch credentials from Streamlit secrets
@@ -77,7 +77,7 @@ template = PromptTemplate(
 # Define a chain to generate Cypher queries
 chain = template | llm
 
-# Streamlit app
+# Streamlit app setup
 st.title("Neo4j Database Query and Visualization")
 
 # User input for query
@@ -89,14 +89,14 @@ if st.button("Submit"):
         cypher_query = chain({"query": query_input})
         st.write(f"Generated Cypher Query: {cypher_query}")
         
-        # Create nodes and relationships
+        # Create nodes and relationships in Neo4j database
         create_graph_data(query_input)
         
-        # Fetch graph data
+        # Fetch graph data for visualization
         fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
         nodes, edges = fetch_graph_data(fetch_query)
         
-        # Visualize the graph
+        # Visualize the graph using PyVis
         if nodes and edges:
             graph_html = visualize_graph(nodes, edges)
             st.components.v1.html(graph_html, height=800, width=1000)
