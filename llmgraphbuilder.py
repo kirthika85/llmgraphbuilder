@@ -24,11 +24,8 @@ def create_graph_data(cypher_query):
     st.write(f"Creating nodes and relationships using query: {cypher_query}")
     with driver.session() as session:
         st.write(f"Executing Cypher query: {cypher_query}")
-        try:
-            session.run(cypher_query)
-        except Exception as e:
-            st.error(f"Error executing Cypher query: {e}")
-    st.write("Nodes and relationships creation attempted.")
+        session.run(cypher_query)
+    st.write("Nodes and relationships created successfully.")
 
 # Function to fetch graph data
 def fetch_graph_data(query):
@@ -105,7 +102,8 @@ if st.button("Submit"):
                 cypher_query = valid_query
             else:
                 st.info("No valid Cypher query found in the response.")
-                return
+                # Removed the return statement here
+                pass
         
         st.write(f"Generated Cypher Query: {cypher_query}")
         
