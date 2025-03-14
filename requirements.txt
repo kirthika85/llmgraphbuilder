@@ -3,3 +3,4 @@ neo4j
 langchain
 openai
 pyvis
+langchain-ai21
