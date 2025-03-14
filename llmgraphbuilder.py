@@ -85,9 +85,11 @@ if st.button("Submit"):
     try:
         # Generate Cypher query using LLM
         prompt = template.format(query=query_input)
-        # Pass the prompt as a HumanMessage
         response = llm([HumanMessage(content=prompt)])
-        cypher_query = response["output"]
+        
+        # Access the response content directly
+        cypher_query = response.content
+        
         st.write(f"Generated Cypher Query: {cypher_query}")
         
         # Create nodes and relationships in Neo4j database
