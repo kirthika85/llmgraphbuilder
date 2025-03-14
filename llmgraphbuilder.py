@@ -2,16 +2,38 @@ import streamlit as st
 from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
-from langchain_ai21 import ChatAI21
-from langchain_core.prompts import PromptTemplate
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain, PromptTemplate
 
-# Set up Neo4j connection
-uri = "bolt://localhost:7687"  # Adjust if using a different host/port
-username = "neo4j"
-password = "password"  # Replace with your password
+# Fetch credentials from Streamlit secrets
+URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://<InstanceName>.databases.neo4j.io"
+AUTH = (st.secrets["NEO4J_USERNAME"], st.secrets["NEO4J_PASSWORD"])  # Username and password
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
-# Connect to the Neo4j database
-driver = GraphDatabase.driver(uri, auth=(username, password))
+# Connect to the Neo4j Aura database
+try:
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+    driver.verify_connectivity()
+    st.success("Connected to Neo4j Aura database successfully!")
+except Exception as e:
+    st.error(f"Failed to connect to Neo4j Aura database: {e}")
+
+# Function to create nodes and relationships
+def create_graph_data(query):
+    with driver.session() as session:
+        # Generate Cypher query to create nodes and relationships
+        cypher_query = f"""
+            UNWIND split('{query}', ',') AS entity
+            MERGE (n:Entity {{name: trim(entity)}})
+        """
+        session.run(cypher_query)
+        
+        # Example to create relationships (adjust based on your needs)
+        relationship_query = """
+            MATCH (n1:Entity {name: 'Entity1'}), (n2:Entity {name: 'Entity2'})
+            MERGE (n1)-[:RELATED_TO]->(n2)
+        """
+        session.run(relationship_query)
 
 # Function to fetch graph data
 def fetch_graph_data(query):
@@ -43,15 +65,14 @@ def visualize_graph(nodes, edges):
     source_code = HtmlFile.read()
     return source_code
 
-# Set up LLM for natural language queries
-import os
-os.environ["AI21_API_KEY"] = "your_api_key_here"
-llm = ChatAI21(model="jamba-instruct", temperature=0)
+# Set up LLM for natural language queries using OpenAI GPT-4
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY  # Fetch OpenAI API key from secrets securely
+llm = OpenAI(model_name="gpt-4", temperature=0)
 
 # Define a prompt template for querying the database
 template = PromptTemplate(
     input_variables=["query"],
-    template="Query the Neo4j database with the following Cypher query: {query}",
+    template="Convert the following text into Cypher queries to create nodes and relationships: {query}",
 )
 
 # Define a chain to generate Cypher queries
@@ -69,8 +90,12 @@ if st.button("Submit"):
         cypher_query = chain({"query": query_input})
         st.write(f"Generated Cypher Query: {cypher_query}")
         
-        # Execute Cypher query against Neo4j
-        nodes, edges = fetch_graph_data(cypher_query)
+        # Create nodes and relationships
+        create_graph_data(query_input)
+        
+        # Fetch graph data
+        fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
+        nodes, edges = fetch_graph_data(fetch_query)
         
         # Visualize the graph
         if nodes and edges:
