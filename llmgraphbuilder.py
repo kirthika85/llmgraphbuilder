@@ -50,13 +50,16 @@ def fetch_graph_data():
                 m = record["m"]
                 r = record["r"]
                 
-                # Add nodes and edges to lists
-                nodes.append(n)
-                nodes.append(m)
+                # Convert frozenset properties to lists for JSON serialization
+                n_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(n).items()}
+                m_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(m).items()}
+                
+                nodes.append({"id": n.id, "properties": n_properties})
+                nodes.append({"id": m.id, "properties": m_properties})
                 edges.append((n.id, m.id, r.type))
             
-            # Remove duplicate nodes
-            unique_nodes = {node.id: node for node in nodes}.values()
+            # Remove duplicate nodes based on their IDs
+            unique_nodes = {node["id"]: node for node in nodes}.values()
             
             st.write(f"Fetched {len(unique_nodes)} unique nodes and {len(edges)} edges.")
             return unique_nodes, edges
@@ -71,7 +74,7 @@ def visualize_graph(nodes, edges):
     net = Network(height="750px", width="100%", notebook=True)
     
     for node in nodes:
-        net.add_node(node.id, label=str(node.get("name", "Unnamed")), title=node.labels)
+        net.add_node(node["id"], label=str(node["properties"].get("name", "Unnamed")), title=str(node["properties"]))
     
     for edge in edges:
         net.add_edge(edge[0], edge[1], label=edge[2])
