@@ -118,4 +118,4 @@ cypher_query_text = convert_to_cypher(question)
 print("Generated Cypher Query:", cypher_query_text)
 
 # Extract actual Cypher queries from the response
-cypher_queries = [line.strip() for line in cypher
+cypher_queries = [line.strip() for line in cypher_query_text.splitlines() if line.strip().startswith(("CREATE", "MATCH"))]
