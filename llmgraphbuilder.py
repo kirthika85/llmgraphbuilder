@@ -20,24 +20,10 @@ except Exception as e:
     st.error(f"Failed to connect to Neo4j Aura database: {e}")
 
 # Function to create nodes and relationships
-def create_graph_data(query):
-    st.write("Creating nodes and relationships...")
+def create_graph_data(cypher_query):
+    st.write(f"Creating nodes and relationships using query: {cypher_query}")
     with driver.session() as session:
-        # Generate Cypher query to create nodes and relationships
-        cypher_query = f"""
-            UNWIND split('{query}', ',') AS entity
-            MERGE (n:Entity {{name: trim(entity)}})
-        """
-        st.write(f"Executing Cypher query: {cypher_query}")
         session.run(cypher_query)
-        
-        # Example to create relationships (adjust based on your needs)
-        relationship_query = """
-            MATCH (n1:Entity {name: 'Entity1'}), (n2:Entity {name: 'Entity2'})
-            MERGE (n1)-[:RELATED_TO]->(n2)
-        """
-        st.write(f"Executing relationship query: {relationship_query}")
-        session.run(relationship_query)
     st.write("Nodes and relationships created successfully.")
 
 # Function to fetch graph data
@@ -105,14 +91,20 @@ if st.button("Submit"):
         st.write(f"Generated Cypher Query: {cypher_query}")
         
         # Create nodes and relationships in Neo4j database
-        create_graph_data(query_input)
+        create_graph_data(cypher_query)
         
         # Fetch graph data for visualization
         fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
         nodes, edges = fetch_graph_data(fetch_query)
         
+        # If no edges are found, try fetching nodes only
+        if not edges:
+            fetch_query = "MATCH (n) RETURN n"
+            nodes, _ = fetch_graph_data(fetch_query)
+            edges = []
+        
         # Visualize the graph using PyVis
-        if nodes and edges:
+        if nodes:
             graph_html = visualize_graph(nodes, edges)
             st.components.v1.html(graph_html, height=800, width=1000)
         else:
