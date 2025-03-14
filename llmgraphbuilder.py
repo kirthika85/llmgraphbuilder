@@ -21,12 +21,14 @@ except Exception as e:
 
 # Function to create nodes and relationships
 def create_graph_data(query):
+    st.write("Creating nodes and relationships...")
     with driver.session() as session:
         # Generate Cypher query to create nodes and relationships
         cypher_query = f"""
             UNWIND split('{query}', ',') AS entity
             MERGE (n:Entity {{name: trim(entity)}})
         """
+        st.write(f"Executing Cypher query: {cypher_query}")
         session.run(cypher_query)
         
         # Example to create relationships (adjust based on your needs)
@@ -34,10 +36,13 @@ def create_graph_data(query):
             MATCH (n1:Entity {name: 'Entity1'}), (n2:Entity {name: 'Entity2'})
             MERGE (n1)-[:RELATED_TO]->(n2)
         """
+        st.write(f"Executing relationship query: {relationship_query}")
         session.run(relationship_query)
+    st.write("Nodes and relationships created successfully.")
 
 # Function to fetch graph data
 def fetch_graph_data(query):
+    st.write("Fetching graph data...")
     with driver.session() as session:
         results = session.run(query)
         nodes = []
@@ -50,12 +55,17 @@ def fetch_graph_data(query):
                 nodes.append(n)
                 nodes.append(m)
                 edges.append((n.id, m.id, r.type))
+            elif "n" in record:
+                n = record["n"]
+                nodes.append(n)
         # Removing duplicates
         nodes = {n.id: n for n in nodes}.values()
+        st.write(f"Fetched {len(nodes)} nodes and {len(edges)} edges.")
         return nodes, edges
 
 # Function to visualize graph
 def visualize_graph(nodes, edges):
+    st.write("Visualizing graph...")
     net = Network(height="750px", width="100%", notebook=True)
     for node in nodes:
         net.add_node(node.id, label=str(node.id), title=node.labels)
@@ -64,6 +74,7 @@ def visualize_graph(nodes, edges):
     net.show("graph.html")
     HtmlFile = open("graph.html", "r", encoding="utf-8")
     source_code = HtmlFile.read()
+    st.write("Graph visualization complete.")
     return source_code
 
 # Set up LLM for natural language queries using OpenAI GPT-4
@@ -85,6 +96,7 @@ if st.button("Submit"):
     try:
         # Generate Cypher query using LLM
         prompt = template.format(query=query_input)
+        st.write(f"Prompt: {prompt}")
         response = llm([HumanMessage(content=prompt)])
         
         # Access the response content directly
