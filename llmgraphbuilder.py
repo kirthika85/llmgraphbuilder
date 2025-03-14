@@ -2,10 +2,8 @@ import streamlit as st
 from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
-from langchain.llms import AI21
+from langchain_ai21 import ChatAI21
 from langchain.chains import LLMChain, PromptTemplate
-from langchain.docstore.document import Document
-from langchain.embeddings import HuggingFaceInference
 
 # Set up Neo4j connection
 uri = "bolt://localhost:7687"  # Adjust if using a different host/port
@@ -22,12 +20,13 @@ def fetch_graph_data(query):
         nodes = []
         edges = []
         for record in results:
-            n = record["n"]
-            m = record["m"]
-            r = record["r"]
-            nodes.append(n)
-            nodes.append(m)
-            edges.append((n.id, m.id, r.type))
+            if "n" in record and "m" in record and "r" in record:
+                n = record["n"]
+                m = record["m"]
+                r = record["r"]
+                nodes.append(n)
+                nodes.append(m)
+                edges.append((n.id, m.id, r.type))
         # Removing duplicates
         nodes = {n.id: n for n in nodes}.values()
         return nodes, edges
@@ -45,7 +44,9 @@ def visualize_graph(nodes, edges):
     return source_code
 
 # Set up LLM for natural language queries
-llm = AI21()
+import os
+os.environ["AI21_API_KEY"] = "your_api_key_here"
+llm = ChatAI21(model="jamba-instruct", temperature=0)
 
 # Define a prompt template for querying the database
 template = PromptTemplate(
@@ -75,8 +76,11 @@ if st.button("Submit"):
         nodes, edges = fetch_graph_data(cypher_query)
         
         # Visualize the graph
-        graph_html = visualize_graph(nodes, edges)
-        st.components.v1.html(graph_html, height=800, width=1000)
+        if nodes and edges:
+            graph_html = visualize_graph(nodes, edges)
+            st.components.v1.html(graph_html, height=800, width=1000)
+        else:
+            st.info("No nodes or edges found in the query result.")
         
     except Exception as e:
         st.error(f"Error processing query: {e}")
