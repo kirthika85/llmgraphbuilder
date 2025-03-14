@@ -96,7 +96,7 @@ if st.button("Submit"):
         create_graph_data(cypher_query)
         
         # Fetch graph data for visualization
-        fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
+        fetch_query = "MATCH (c:Country)-[r]->(ci:City) RETURN c, ci, r"
         st.write(f"Fetching graph data using query: {fetch_query}")
         nodes, edges = fetch_graph_data(fetch_query)
         
