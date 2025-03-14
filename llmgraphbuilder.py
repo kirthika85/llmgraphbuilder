@@ -23,13 +23,15 @@ except Exception as e:
 def create_graph_data(cypher_query):
     st.write(f"Creating nodes and relationships using query: {cypher_query}")
     with driver.session() as session:
+        st.write(f"Executing Cypher query: {cypher_query}")
         session.run(cypher_query)
     st.write("Nodes and relationships created successfully.")
 
 # Function to fetch graph data
 def fetch_graph_data(query):
-    st.write("Fetching graph data...")
+    st.write(f"Fetching graph data using query: {query}")
     with driver.session() as session:
+        st.write(f"Executing Cypher query: {query}")
         results = session.run(query)
         nodes = []
         edges = []
@@ -95,11 +97,13 @@ if st.button("Submit"):
         
         # Fetch graph data for visualization
         fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
+        st.write(f"Fetching graph data using query: {fetch_query}")
         nodes, edges = fetch_graph_data(fetch_query)
         
         # If no edges are found, try fetching nodes only
         if not edges:
             fetch_query = "MATCH (n) RETURN n"
+            st.write(f"Fetching nodes using query: {fetch_query}")
             nodes, _ = fetch_graph_data(fetch_query)
             edges = []
         
