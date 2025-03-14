@@ -3,7 +3,7 @@ from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
 from langchain_ai21 import ChatAI21
-from langchain.chains import LLMChain, PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 # Set up Neo4j connection
 uri = "bolt://localhost:7687"  # Adjust if using a different host/port
@@ -55,10 +55,7 @@ template = PromptTemplate(
 )
 
 # Define a chain to generate Cypher queries
-chain = LLMChain(
-    llm=llm,
-    prompt=template,
-)
+chain = template | llm
 
 # Streamlit app
 st.title("Neo4j Database Query and Visualization")
