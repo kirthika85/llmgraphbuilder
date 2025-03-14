@@ -4,6 +4,7 @@ from neo4j import GraphDatabase
 import pandas as pd
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
 
 # Fetch credentials from Streamlit secrets
 URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://b13c8ca5.databases.neo4j.io"
@@ -84,7 +85,8 @@ if st.button("Submit"):
     try:
         # Generate Cypher query using LLM
         prompt = template.format(query=query_input)
-        response = llm({"input": {"role": "user", "content": prompt}})
+        # Pass the prompt as a HumanMessage
+        response = llm([HumanMessage(content=prompt)])
         cypher_query = response["output"]
         st.write(f"Generated Cypher Query: {cypher_query}")
         
