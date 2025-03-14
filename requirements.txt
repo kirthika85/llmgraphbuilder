@@ -4,4 +4,4 @@ langchain
 openai
 pyvis
 langchain-ai21
-
+langchain-openai
