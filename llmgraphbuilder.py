@@ -1,36 +1,62 @@
-import streamlit as st
-from pyvis.network import Network
+import os
 from neo4j import GraphDatabase
-import pandas as pd
+from pyvis.network import Network
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
 # Fetch credentials from Streamlit secrets
-URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://your-instance.databases.neo4j.io"
-AUTH = (st.secrets["NEO4J_USERNAME"], st.secrets["NEO4J_PASSWORD"])  # Username and password
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+URI = os.getenv("NEO4J_URI")  # Example: "neo4j+s://your-instance.databases.neo4j.io"
+AUTH = (os.getenv("NEO4J_USERNAME"), os.getenv("NEO4J_PASSWORD"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Connect to the Neo4j Aura database
-try:
-    driver = GraphDatabase.driver(URI, auth=AUTH)
-    driver.verify_connectivity()
-    st.success("Connected to Neo4j Aura database successfully!")
-except Exception as e:
-    st.error(f"Failed to connect to Neo4j Aura database: {e}")
+# Connect to Neo4j Aura database
+driver = GraphDatabase.driver(URI, auth=AUTH)
 
-# Function to create nodes and relationships
-def create_graph_data(cypher_query):
-    st.write(f"Creating nodes and relationships using query: {cypher_query}")
+# Set up LLM for natural language queries using OpenAI GPT-4
+llm = ChatOpenAI(model="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
+
+# Define a prompt template for generating Cypher queries dynamically
+template = PromptTemplate(
+    input_variables=["query"],
+    template="""
+    Convert the following text into Cypher queries to create nodes and relationships:
+    - Use "CAPITAL" for relationships between countries and their capitals.
+    - Use "CONTAINS" for relationships between solar systems and planets.
+    - Use "HAS_DEFINITION" for mapping topics like "Artificial Intelligence" with their definitions.
+    Query: {query}
+    """
+)
+
+# Function to convert natural language to Cypher query using LLM
+def convert_to_cypher(question):
+    prompt = template.format(query=question)
+    response = llm([HumanMessage(content=prompt)])
+    return response.content
+
+# Function to execute Cypher query and display results
+def execute_cypher_query(cypher_query):
     with driver.session() as session:
         try:
-            st.write(f"Executing Cypher query: {cypher_query}")
-            session.run(cypher_query)
-            st.write("Nodes and relationships created successfully.")
+            results = session.run(cypher_query)
+            print("Query Results:")
+            for record in results:
+                print(record)
         except Exception as e:
-            st.error(f"Error executing Cypher query: {e}")
+            print(f"Error executing Cypher query: {e}")
 
-# Function to fetch all graph data (nodes with and without relationships)
+# Function to create nodes and relationships dynamically using Cypher query
+def create_graph_data(cypher_queries):
+    with driver.session() as session:
+        for query in cypher_queries:
+            try:
+                print(f"Executing Cypher query: {query}")
+                session.run(query)
+                print("Nodes and relationships created successfully.")
+            except Exception as e:
+                print(f"Error executing Cypher query: {e}")
+
+# Function to fetch all graph data dynamically (nodes with and without relationships)
 def fetch_graph_data():
     try:
         with driver.session() as session:
@@ -39,7 +65,7 @@ def fetch_graph_data():
                 MATCH (n)-[r]->(m)
                 RETURN n, r, m LIMIT 100
             """
-            st.write(f"Executing Cypher query for nodes with relationships: {query_with_relationships}")
+            print(f"Executing Cypher query for nodes with relationships: {query_with_relationships}")
             results_with_relationships = session.run(query_with_relationships)
             
             nodes = []
@@ -64,7 +90,7 @@ def fetch_graph_data():
                 WHERE NOT (n)--()
                 RETURN n LIMIT 100
             """
-            st.write(f"Executing Cypher query for nodes without relationships: {query_without_relationships}")
+            print(f"Executing Cypher query for nodes without relationships: {query_without_relationships}")
             results_without_relationships = session.run(query_without_relationships)
             
             for record in results_without_relationships:
@@ -78,86 +104,33 @@ def fetch_graph_data():
             # Remove duplicate nodes based on their IDs
             unique_nodes = {node["id"]: node for node in nodes}.values()
             
-            st.write(f"Fetched {len(unique_nodes)} unique nodes and {len(edges)} edges.")
+            print(f"Fetched {len(unique_nodes)} unique nodes and {len(edges)} edges.")
             return unique_nodes, edges
             
     except Exception as e:
-        st.error(f"Error fetching graph data: {e}")
+        print(f"Error fetching graph data: {e}")
         return [], []
 
-# Function to visualize graph using PyVis
-def visualize_graph(nodes, edges):
-    st.write("Visualizing graph...")
-    net = Network(height="750px", width="100%", notebook=True)
-    
-    # Add nodes with their names and properties
-    for node in nodes:
-        net.add_node(node["id"], label=node["name"], title=str(node["properties"]))
-    
-    # Add edges with their types
-    for edge in edges:
-        net.add_edge(edge["source"], edge["target"], label=edge["type"])
-    
-    net.show("graph.html")
-    HtmlFile = open("graph.html", "r", encoding="utf-8")
-    source_code = HtmlFile.read()
-    st.write("Graph visualization complete.")
-    return source_code
+# Example usage: Get input question from the user
+question = input("Enter your question: ")
 
-# Set up LLM for natural language queries using OpenAI GPT-4
-llm = ChatOpenAI(model="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
+# Convert question to Cypher query using LLM
+cypher_query_text = convert_to_cypher(question)
+print("Generated Cypher Query:", cypher_query_text)
 
-# Define a prompt template for generating Cypher queries dynamically
-template = PromptTemplate(
-    input_variables=["query"],
-    template="Convert the following text into Cypher queries to create nodes and relationships: {query}"
-)
+# Extract actual Cypher queries from the response
+cypher_queries = [line.strip() for line in cypher_query_text.splitlines() if line.strip().startswith(("CREATE", "MATCH"))]
+print("Extracted Cypher Queries:", cypher_queries)
 
-# Streamlit app setup
-st.title("Neo4j Database Query and Visualization")
+# Create nodes and relationships dynamically using extracted queries
+create_graph_data(cypher_queries)
 
-# User input for query
-query_input = st.text_input("Enter your query")
+# Fetch graph data dynamically for visualization or debugging purposes
+nodes, edges = fetch_graph_data()
 
-if st.button("Submit"):
-    try:
-        # Generate Cypher query using LLM dynamically based on user input
-        prompt = template.format(query=query_input)
-        st.write(f"Prompt: {prompt}")
-        response = llm([HumanMessage(content=prompt)])
-        
-        # Access the response content directly (the generated Cypher query)
-        cypher_query_text = response.content
-        
-        # Extract actual Cypher queries from the response
-        cypher_queries = []
-        for line in cypher_query_text.splitlines():
-            if line.strip().startswith("CREATE") or line.strip().startswith("MATCH"):
-                cypher_queries.append(line.strip())
-        
-        st.write(f"Extracted Cypher Queries: {cypher_queries}")
-        
-        # Create nodes and relationships in Neo4j database dynamically
-        for query in cypher_queries:
-            create_graph_data(query)
-        
-        # Fetch all graph data dynamically for visualization
-        nodes, edges = fetch_graph_data()
-        
-        # Visualize the graph using PyVis if data exists
-        if nodes or edges:
-            graph_html = visualize_graph(nodes, edges)
-            st.components.v1.html(graph_html, height=800, width=1000)
-        else:
-            st.info("No nodes or edges found in the query result.")
-        
-    except Exception as e:
-        st.error(f"Error processing query: {e}")
+print("\nGraph Data:")
+print(f"Nodes: {nodes}")
+print(f"Edges: {edges}")
 
 # Close Neo4j driver when done
-def close_driver():
-    driver.close()
-
-# Close driver on app exit
-import atexit
-atexit.register(close_driver)
+driver.close()
