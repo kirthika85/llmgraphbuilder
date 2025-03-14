@@ -90,13 +90,27 @@ if st.button("Submit"):
         # Access the response content directly
         cypher_query = response.content
         
+        # Check if the response contains a valid Cypher query
+        if cypher_query.startswith("Cypher is a query language"):
+            # Extract the actual Cypher query from the response
+            lines = cypher_query.splitlines()
+            valid_query = ""
+            for line in lines:
+                if line.startswith("CREATE"):
+                    valid_query += line + "\n"
+            if valid_query:
+                cypher_query = valid_query
+            else:
+                st.info("No valid Cypher query found in the response.")
+                return
+        
         st.write(f"Generated Cypher Query: {cypher_query}")
         
         # Create nodes and relationships in Neo4j database
         create_graph_data(cypher_query)
         
         # Fetch graph data for visualization
-        fetch_query = "MATCH (c:Country)-[r]->(ci:City) RETURN c, ci, r"
+        fetch_query = "MATCH (n)-[r]->(m) RETURN n, m, r"
         st.write(f"Fetching graph data using query: {fetch_query}")
         nodes, edges = fetch_graph_data(fetch_query)
         
