@@ -2,8 +2,8 @@ import streamlit as st
 from pyvis.network import Network
 from neo4j import GraphDatabase
 import pandas as pd
-from langchain_openai import OpenAI
-from langchain.chains import LLMChain, PromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
 
 # Fetch credentials from Streamlit secrets
 URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://b13c8ca5.databases.neo4j.io"
@@ -66,7 +66,7 @@ def visualize_graph(nodes, edges):
     return source_code
 
 # Set up LLM for natural language queries using OpenAI GPT-4
-llm = OpenAI(model_name="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(model="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
 
 # Define a prompt template for querying the database
 template = PromptTemplate(
