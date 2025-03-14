@@ -34,7 +34,7 @@ def create_graph_data(cypher_query):
 def fetch_graph_data():
     try:
         with driver.session() as session:
-            # Fetch all nodes and their relationships
+            # Fetch all nodes and their relationships with properties
             query_with_relationships = """
                 MATCH (n)-[r]->(m)
                 RETURN n, r, m LIMIT 100
@@ -50,13 +50,13 @@ def fetch_graph_data():
                 m = record["m"]
                 r = record["r"]
                 
-                # Convert frozenset properties to lists for JSON serialization
+                # Extract node properties for JSON serialization
                 n_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(n).items()}
                 m_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(m).items()}
                 
-                nodes.append({"id": n.id, "properties": n_properties})
-                nodes.append({"id": m.id, "properties": m_properties})
-                edges.append((n.id, m.id, r.type))
+                nodes.append({"id": n.id, "name": n_properties.get("name", "Unnamed"), "properties": n_properties})
+                nodes.append({"id": m.id, "name": m_properties.get("name", "Unnamed"), "properties": m_properties})
+                edges.append({"source": n.id, "target": m.id, "type": r.type})
             
             # Fetch all nodes without relationships
             query_without_relationships = """
@@ -70,10 +70,10 @@ def fetch_graph_data():
             for record in results_without_relationships:
                 n = record["n"]
                 
-                # Convert frozenset properties to lists for JSON serialization
+                # Extract node properties for JSON serialization
                 n_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(n).items()}
                 
-                nodes.append({"id": n.id, "properties": n_properties})
+                nodes.append({"id": n.id, "name": n_properties.get("name", "Unnamed"), "properties": n_properties})
             
             # Remove duplicate nodes based on their IDs
             unique_nodes = {node["id"]: node for node in nodes}.values()
@@ -90,11 +90,13 @@ def visualize_graph(nodes, edges):
     st.write("Visualizing graph...")
     net = Network(height="750px", width="100%", notebook=True)
     
+    # Add nodes with their names and properties
     for node in nodes:
-        net.add_node(node["id"], label=str(node["properties"].get("name", "Unnamed")), title=str(node["properties"]))
+        net.add_node(node["id"], label=node["name"], title=str(node["properties"]))
     
+    # Add edges with their types
     for edge in edges:
-        net.add_edge(edge[0], edge[1], label=edge[2])
+        net.add_edge(edge["source"], edge["target"], label=edge["type"])
     
     net.show("graph.html")
     HtmlFile = open("graph.html", "r", encoding="utf-8")
@@ -105,7 +107,7 @@ def visualize_graph(nodes, edges):
 # Set up LLM for natural language queries using OpenAI GPT-4
 llm = ChatOpenAI(model="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
 
-# Define a prompt template for generating Cypher queries
+# Define a prompt template for generating Cypher queries dynamically
 template = PromptTemplate(
     input_variables=["query"],
     template="Convert the following text into Cypher queries to create nodes and relationships: {query}"
@@ -119,7 +121,7 @@ query_input = st.text_input("Enter your query")
 
 if st.button("Submit"):
     try:
-        # Generate Cypher query using LLM
+        # Generate Cypher query using LLM dynamically based on user input
         prompt = template.format(query=query_input)
         st.write(f"Prompt: {prompt}")
         response = llm([HumanMessage(content=prompt)])
@@ -135,11 +137,11 @@ if st.button("Submit"):
         
         st.write(f"Extracted Cypher Queries: {cypher_queries}")
         
-        # Create nodes and relationships in Neo4j database
+        # Create nodes and relationships in Neo4j database dynamically
         for query in cypher_queries:
             create_graph_data(query)
         
-        # Fetch graph data dynamically for visualization
+        # Fetch all graph data dynamically for visualization
         nodes, edges = fetch_graph_data()
         
         # Visualize the graph using PyVis if data exists
