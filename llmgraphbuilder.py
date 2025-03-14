@@ -6,7 +6,7 @@ from langchain.llms import OpenAI
 from langchain.chains import LLMChain, PromptTemplate
 
 # Fetch credentials from Streamlit secrets
-URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://<InstanceName>.databases.neo4j.io"
+URI = st.secrets["NEO4J_URI"]  # Example: "neo4j+s://b13c8ca5.databases.neo4j.io"
 AUTH = (st.secrets["NEO4J_USERNAME"], st.secrets["NEO4J_PASSWORD"])  # Username and password
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
@@ -66,8 +66,7 @@ def visualize_graph(nodes, edges):
     return source_code
 
 # Set up LLM for natural language queries using OpenAI GPT-4
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY  # Fetch OpenAI API key from secrets securely
-llm = OpenAI(model_name="gpt-4", temperature=0)
+llm = OpenAI(model_name="gpt-4", temperature=0, openai_api_key=OPENAI_API_KEY)
 
 # Define a prompt template for querying the database
 template = PromptTemplate(
