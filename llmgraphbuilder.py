@@ -1,3 +1,4 @@
+import streamlit as st
 import os
 from neo4j import GraphDatabase
 from langchain_openai import ChatOpenAI
@@ -110,12 +111,39 @@ def fetch_graph_data():
         print(f"Error fetching graph data: {e}")
         return [], []
 
-# Example usage: Get input question from the user
-question = input("Enter your question: ")
+# Streamlit app setup
+st.title("Neo4j Database Query and Visualization")
 
-# Convert question to Cypher query using LLM
-cypher_query_text = convert_to_cypher(question)
-print("Generated Cypher Query:", cypher_query_text)
+# User input for query
+question = st.text_area("Enter your question")
 
-# Extract actual Cypher queries from the response
-cypher_queries = [line.strip() for line in cypher_query_text.splitlines() if line.strip().startswith(("CREATE", "MATCH"))]
+if st.button("Submit"):
+    try:
+        # Convert question to Cypher query using LLM
+        cypher_query_text = convert_to_cypher(question)
+        print("Generated Cypher Query:", cypher_query_text)
+        
+        # Extract actual Cypher queries from the response
+        cypher_queries = [line.strip() for line in cypher_query_text.splitlines() if line.strip().startswith(("CREATE", "MATCH"))]
+        print("Extracted Cypher Queries:", cypher_queries)
+        
+        # Create nodes and relationships in Neo4j database dynamically
+        create_graph_data(cypher_queries)
+        
+        # Fetch graph data dynamically for visualization or debugging purposes
+        nodes, edges = fetch_graph_data()
+        
+        print("\nGraph Data:")
+        print(f"Nodes: {nodes}")
+        print(f"Edges: {edges}")
+        
+    except Exception as e:
+        print(f"Error processing query: {e}")
+
+# Close Neo4j driver when done
+def close_driver():
+    driver.close()
+
+# Close driver on app exit
+import atexit
+atexit.register(close_driver)
