@@ -98,11 +98,11 @@ if st.button("Submit"):
             for line in lines:
                 if line.startswith("CREATE"):
                     valid_query += line + "\n"
-            if valid_query:
-                cypher_query = valid_query
-            else:
-                st.info("No valid Cypher query found in the response.")
-                return
+                if valid_query:
+                    cypher_query = valid_query
+                else:
+                    st.info("No valid Cypher query found in the response.")
+                    return
         
         st.write(f"Generated Cypher Query: {cypher_query}")
         
