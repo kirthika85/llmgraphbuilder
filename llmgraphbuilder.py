@@ -30,22 +30,22 @@ def create_graph_data(cypher_query):
         except Exception as e:
             st.error(f"Error executing Cypher query: {e}")
 
-# Function to fetch graph data dynamically
+# Function to fetch all graph data (nodes with and without relationships)
 def fetch_graph_data():
     try:
         with driver.session() as session:
-            # Fetch all nodes and their relationships dynamically
-            query = """
+            # Fetch all nodes and their relationships
+            query_with_relationships = """
                 MATCH (n)-[r]->(m)
                 RETURN n, r, m LIMIT 100
             """
-            st.write(f"Executing Cypher query: {query}")
-            results = session.run(query)
+            st.write(f"Executing Cypher query for nodes with relationships: {query_with_relationships}")
+            results_with_relationships = session.run(query_with_relationships)
             
             nodes = []
             edges = []
             
-            for record in results:
+            for record in results_with_relationships:
                 n = record["n"]
                 m = record["m"]
                 r = record["r"]
@@ -58,6 +58,23 @@ def fetch_graph_data():
                 nodes.append({"id": m.id, "properties": m_properties})
                 edges.append((n.id, m.id, r.type))
             
+            # Fetch all nodes without relationships
+            query_without_relationships = """
+                MATCH (n)
+                WHERE NOT (n)--()
+                RETURN n LIMIT 100
+            """
+            st.write(f"Executing Cypher query for nodes without relationships: {query_without_relationships}")
+            results_without_relationships = session.run(query_without_relationships)
+            
+            for record in results_without_relationships:
+                n = record["n"]
+                
+                # Convert frozenset properties to lists for JSON serialization
+                n_properties = {k: list(v) if isinstance(v, frozenset) else v for k, v in dict(n).items()}
+                
+                nodes.append({"id": n.id, "properties": n_properties})
+            
             # Remove duplicate nodes based on their IDs
             unique_nodes = {node["id"]: node for node in nodes}.values()
             
@@ -67,6 +84,7 @@ def fetch_graph_data():
     except Exception as e:
         st.error(f"Error fetching graph data: {e}")
         return [], []
+
 
 # Function to visualize graph using PyVis
 def visualize_graph(nodes, edges):
