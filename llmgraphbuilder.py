@@ -74,9 +74,6 @@ template = PromptTemplate(
     template="Convert the following text into Cypher queries to create nodes and relationships: {query}",
 )
 
-# Define a chain to generate Cypher queries
-chain = template | llm
-
 # Streamlit app setup
 st.title("Neo4j Database Query and Visualization")
 
@@ -86,7 +83,9 @@ query_input = st.text_input("Enter your query")
 if st.button("Submit"):
     try:
         # Generate Cypher query using LLM
-        cypher_query = chain({"query": query_input})
+        prompt = template.format(query=query_input)
+        response = llm({"input": {"role": "user", "content": prompt}})
+        cypher_query = response["output"]
         st.write(f"Generated Cypher Query: {cypher_query}")
         
         # Create nodes and relationships in Neo4j database
